@@ -21,7 +21,7 @@ knitr::opts_chunk$set(echo = TRUE)
 - work with matrices and matrix multiplication
 - explore an interesting data set: how much do mammals sleep
 - more essentials of the standard graphics library
-- learn more ggplots
+- learn more about ggplots
 
 
 # Functions and apply

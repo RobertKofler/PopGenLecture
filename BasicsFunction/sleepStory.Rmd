@@ -103,7 +103,9 @@ A ggplot is built from layers that are combined with +:
 ggplot(ms, aes(x = bodywt, y = brainwt)) +
   geom_point() 
 ```
+
 Nice - but we do not really see a trend. Can we do better, e.g. by making the axis log10.
+
 
 ```{r}
 ggplot(ms, aes(x = bodywt, y = brainwt)) +
@@ -111,7 +113,10 @@ ggplot(ms, aes(x = bodywt, y = brainwt)) +
   scale_x_log10() +
   scale_y_log10()
 ```
+
 There is a clear trend - the more body weight the more brain weight!
+
+
 ### I have a hypothesis, could this depend on the diet?
 ```{r}
 ggplot(ms, aes(x = bodywt, y = brainwt,color=vore)) +
@@ -150,7 +155,9 @@ ggplot(ms, aes(x = bodywt, y = brainwt)) +
 ggplot(ms, aes(x = vore, y = sleep_total)) +
   geom_boxplot()
 ```
+
 I do not like that the ones without info are a separate group lets remove them
+
 
 ```{r}
 msv <- subset(ms, !is.na(vore)) # ! means NOT
@@ -159,6 +166,7 @@ ggplot(msv, aes(x = vore, y = sleep_total)) +
   geom_boxplot()
 ``` 
 It is sometimes argued that boxplots are not great, as they may hide outliers, so it could be helpful to actually show the data points as well
+
 ```{r}
 ggplot(msv, aes(x = vore, y = sleep_total)) +
   geom_boxplot(outlier.shape = NA) + # hide outliers, the jitter shows all points anyway
@@ -175,7 +183,9 @@ ggplot(msv, aes(x = bodywt, y = sleep_total,color=vore)) +
   scale_x_log10() +
   labs(x = "Body weight (kg)", y = "Total sleep (hours per day)")
 ```
+
 Or show them separately using faceting
+
 ```{r}
 ggplot(msv, aes(x = bodywt, y = sleep_total)) +
   geom_point() +
