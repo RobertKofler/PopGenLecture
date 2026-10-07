@@ -12,20 +12,12 @@ basicFunctions
 ## Today we learn
 
 - write own functions
-
 - automate repetitive work with loops, sapply and replicate
-
-- explore an interesting data set: how much do mammals sleep
-
-- more essentials of the standard graphics library
-
-- learn more ggplots
-
-- work with matrices and matrix multiplication
-
 - make decisions with if/else
-
-- more
+- work with matrices and matrix multiplication
+- explore an interesting data set: how much do mammals sleep
+- more essentials of the standard graphics library
+- learn more ggplots
 
 # Functions and apply
 
@@ -156,23 +148,52 @@ print(long)
 
     ## [1] 40 50 80 90
 
-## sapply
+## sapply and if/else
 
-Since we already have apply lets also demonstrate: sapply
-
-``` r
-ra<-sapply(a,square) # for square see above
-rb<-sapply(b,square)
-print(ra)
-```
-
-    ## [1]  100 2500 6400 8100
+I want to know if i sleep enough. So i make a function giving me the
+answer
 
 ``` r
-print(rb)
+sleep_enough <- function(hours) {
+  var<-""
+  if (hours >= 14) {
+    var<-"more than enough"
+  } else if (hours >= 8) {
+    var<-"enough"
+  } else {
+    var<-"short"
+  }
+  return(var)
+}
 ```
 
-    ## [1] 1600  400  900 1600
+Do I sleep enough
+
+``` r
+# Lets see, do i sleep enough?
+print(sleep_enough(7))
+```
+
+    ## [1] "short"
+
+can i use this function with multiple people?
+
+``` r
+mp<-c(1,7,8,14,12,1)
+#print(sleep_enough(mp))
+# no i get an error! 
+```
+
+One solution is sapply
+
+``` r
+mp<-c(1,7,8,14,12,1)
+res<-sapply(mp,sleep_enough)
+print(res)
+```
+
+    ## [1] "short"            "short"            "enough"           "more than enough"
+    ## [5] "enough"           "short"
 
 **To summarize: apply applies a function to single (sapply) or multiple
 (mapply) values**
@@ -195,7 +216,7 @@ rep<-replicate(5,rnorm(1))
 print(rep)
 ```
 
-    ## [1]  0.38671656  0.15006709 -0.01192094 -0.02844462 -0.10526149
+    ## [1] 0.79246298 0.34994270 0.08460286 0.58432475 0.41548076
 
 ``` r
 # this was just for demonstration; because actually...
@@ -203,7 +224,7 @@ rep<-rnorm(5)
 print(rep)
 ```
 
-    ## [1]  0.0483448  0.2777929 -0.7295023  0.4239744 -0.3600179
+    ## [1] -0.07358416  1.19645884 -0.11925809  0.76170357  1.73102346
 
 # Matrices
 
@@ -315,7 +336,7 @@ g<-ggplot(df, aes(x = x, y = y)) +
 plot(g)
 ```
 
-![](basicFunction_files/figure-gfm/unnamed-chunk-19-1.png)<!-- --> \###
+![](basicFunction_files/figure-gfm/unnamed-chunk-22-1.png)<!-- --> \###
 so what is a matrix doing to our F-letter?
 
 ``` r
@@ -375,7 +396,7 @@ g<-ggplot(df, aes(x = x, y = y, fill = version)) +
 plot(g)
 ```
 
-![](basicFunction_files/figure-gfm/unnamed-chunk-22-1.png)<!-- --> \###
+![](basicFunction_files/figure-gfm/unnamed-chunk-25-1.png)<!-- --> \###
 now lets turn this into a function
 
 ``` r
@@ -412,7 +433,7 @@ print(id)
 transform(fletter,id)
 ```
 
-![](basicFunction_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
+![](basicFunction_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
 
 ``` r
 # no change => thats why this is called identity matrix
@@ -433,7 +454,7 @@ print(tp)
 transform(fletter,tp)
 ```
 
-![](basicFunction_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+![](basicFunction_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
 
 ``` r
 # transposing = exchange x and y-letters
@@ -454,7 +475,7 @@ print(xs)
 transform(fletter,xs)
 ```
 
-![](basicFunction_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
+![](basicFunction_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
 
 ``` r
 # x-scaling
@@ -477,7 +498,7 @@ print(dt1)
 transform(fletter,dt1)
 ```
 
-![](basicFunction_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
+![](basicFunction_files/figure-gfm/unnamed-chunk-34-1.png)<!-- -->
 
 ``` r
 # desaster, my polygon has now shrunk to a point at coordinates 0
@@ -498,20 +519,13 @@ print(dt2)
 transform(fletter,dt2)
 ```
 
-![](basicFunction_files/figure-gfm/unnamed-chunk-33-1.png)<!-- -->
+![](basicFunction_files/figure-gfm/unnamed-chunk-36-1.png)<!-- -->
 
 ``` r
 # voila, we have combined two linear transformation into a single matrix!
 # transposing and x-scaling
 ```
 
-### Assignment until next week
+# Explore interesting data set - how much do mammals sleep
 
-- Tell me a scientific story in RMarkdown; generate a pdf of the story
-  including visualizations with ggplot2 and sent them to
-  <biomedpython@gmail.com> by end of next week.
-- Be creative and ask questions; tell an interesting story with the
-  analysis (not using excessive words)
-- You could do it with the lungdeaths; but feel free to use any data set
-  of interest (voting behaviour, genetic data, economic development,
-  healthcare, etc)
+**new Rmarkdown sleepStorry**

@@ -17,15 +17,12 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Today we learn
 - write own functions
 - automate repetitive work with loops, sapply and replicate
+- make decisions with if/else
+- work with matrices and matrix multiplication
 - explore an interesting data set: how much do mammals sleep
 - more essentials of the standard graphics library
 - learn more ggplots
 
-- work with matrices and matrix multiplication
-
-- make decisions with if/else
-
-- more 
 
 # Functions and apply
 
@@ -124,13 +121,40 @@ long<-mapply(longer_side,a,b)
 print(long)
 ```
 
-## sapply
-Since we already have apply lets also demonstrate: sapply
+## sapply and if/else
+I want to know if i sleep enough.
+So i make a function giving me the answer
+
 ```{r}
-ra<-sapply(a,square) # for square see above
-rb<-sapply(b,square)
-print(ra)
-print(rb)
+sleep_enough <- function(hours) {
+  var<-""
+  if (hours >= 14) {
+    var<-"more than enough"
+  } else if (hours >= 8) {
+    var<-"enough"
+  } else {
+    var<-"short"
+  }
+  return(var)
+}
+```
+
+Do I sleep enough
+```{r}
+# Lets see, do i sleep enough?
+print(sleep_enough(7))
+```
+can i use this function with multiple people?
+```{r}
+mp<-c(1,7,8,14,12,1)
+#print(sleep_enough(mp))
+# no i get an error! 
+```
+One solution is sapply
+```{r}
+mp<-c(1,7,8,14,12,1)
+res<-sapply(mp,sleep_enough)
+print(res)
 ```
 **To summarize: apply applies a function to single (sapply) or multiple (mapply) values**
 
@@ -304,7 +328,7 @@ transform(fletter,dt2)
 # voila, we have combined two linear transformation into a single matrix!
 # transposing and x-scaling
 ```
-### Assignment until next week
-* Tell me a scientific story in RMarkdown; generate a pdf of the story including visualizations with ggplot2 and sent them to biomedpython@gmail.com by end of next week.
-* Be creative and ask questions; tell an interesting story with the analysis (not using excessive words)
-* You could do it with the lungdeaths; but feel free to use any data set of interest (voting behaviour, genetic data, economic development, healthcare, etc)
+# Explore interesting data set - how much do mammals sleep
+
+**new Rmarkdown sleepStorry**
+
