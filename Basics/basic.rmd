@@ -4,9 +4,6 @@ subtitle: "Introduction to data visualization with R"
 author: "Dr. Robert Kofler"
 output: 
   github_document: 
-  toc: true
-  toc_depth: 2
-geometry: margin=0.5in
 ---
 
 
@@ -25,10 +22,10 @@ Why are we using the **R** programming language?
 
 ## Short history of R
 
-* AT&T (American Telecom and Telegraph Company) developed the language S. S is short for statistics and alludes to the other language developed by AT&T around the same time: the famous C language
+* AT&T (American Telephone and Telegraph Company) developed the language S. S is short for statistics and alludes to the other language developed by AT&T around the same time: the famous C language
 * S was sold to the small company TIBCO, which added a grapical user interface on top of S and sells the product as S-PLUS
 * R was conceived 1992 by Ross Ihaka and Robert Gentleman who added lexical scoping on top of S. Robert Gentleman is also the founding father of Bioconductor, probably the most widly used package for Bioinformatics, and now works for 23andMe.
-* A first stable beta version of R was released 2000
+* A first stable version of R was released 2000
 * R is distributed under GNU Public licence
 
 ## Requirements
@@ -270,7 +267,7 @@ mode(a)
 
 ## Summary of R data types
 
-* modes: **numeric**, **integer**, **string**, **boolean**, factor
+* modes: **numeric**, **character**, **logical**, factor
 * single mode collections: **vector**, matrix (2D vector)
 * mixed mode collections:  list, **dataframe**
 
@@ -287,7 +284,7 @@ Factors are used to describe discrete categories
 * eye color: brown, green, blue
 * sex in our list: female, male
 * sex in other lists: androgyn, bigender, male, female, genderqueer, gender variabel, female to male, male to female, pangender, trans, transfemale, transmale....
-* living status: death, alive
+* living status: dead, alive
 * any othes?
 
 How to generate a factor?
