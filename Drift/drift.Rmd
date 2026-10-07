@@ -1,0 +1,423 @@
+---
+title: "Exercises in Population Genetics"
+subtitle: "Binomial Sampling and Wright-Fisher Simulations"
+author: "Dr. Robert Kofler"
+output: 
+  github_document: 
+  toc: true
+  toc_depth: 2
+geometry: margin=0.5in
+---
+
+# Introduction
+## Acknowledgments
+Thanks go to Thomas Taus for sharing the code of his poolSeq package with me, which acted as inspiration for this lecture.
+
+## The Wright Fisher Model
+
+Describes the changes of allele frequencies  within populations during evolution.
+The Wright-Fisher Model is making the following simplifications
+
+* non overlapping generations
+* finite population size
+* infinite number of gametes (e.g. sperm)
+
+## Genetic drift
+
+Imagine a bag full of marbles to represent a population with a size of 20. For the next generation we randomly pick 20 marbles (finite population size) but every marble may be picked multiple times (infinite number of gametes). The number of times a marble was picked is indicated with the black dots. Marbles are always only picked from the previous bottle (non overlapping generations). In this example the blue marbles get fixed within 4 generations.
+The marble sampling with replacement is binomial sampling.
+
+![](../pics/genetic_drift.png)
+By Gringer - Own work, CC BY-SA 3.0, https://commons.wikimedia.org/w/index.php?curid=23655974
+
+
+Models like this are the origin of the derisive term "bean bag genetics" coined by Ernst Mayr. This resulted in a highly interesting, and funny, quarel between Mayr and J.B.S Haldane about the legitimacy of population genetics models.
+
+Interesting literature:
+
+* E. Mayr: Animal Species and Evolution (http://www.hup.harvard.edu/catalog.php?isbn=9780674865327)
+* JBS Haldane: A defence of beanbag genetics (http://ije.oxfordjournals.org/content/37/3/435.full)
+* J. Crow: The Beanbag lives on: (http://www.nature.com/nature/journal/v409/n6822/full/409771a0.html)
+
+# Binomial sampling
+As mentioned above, marble sampling can be described as binomial sampling.
+
+## rbinom() binomial sampling in R 
+
+R offers a nice function to generate binomial distributed random variables: rbinom()
+
+```{r}
+# rbinom
+# rbinom(n, size, prob);
+# n.. number of random numbers to generate (create n new populations)
+# size.. number of trials (how many marbles to draw, i.e. population size) )
+# prob.. probability of success for a trial (e.g. frequency of blue marbles)
+# drawing blue has a probability of 0.2
+
+Ne<-100 # we use a population size of 100 
+bv<-rbinom(1,Ne,0.2)
+bv
+```
+
+Thats the number of blue marbles in the new population.
+The frequency of blue marbles can than easily be computed
+
+```{r}
+bluefreq<-bv/Ne
+bluefreq
+```
+
+
+## Binomial distribution
+
+rbinom() also allows to draw multiple numbers, which would correspond to spawning n new populations from the given population (but not successive generations, this needs a loop)
+
+```{r}
+Ne<-100 
+bv<-rbinom(40,Ne,0.2)
+bv
+```
+
+We can easily plot this
+
+```{r}
+# breaks sets the breaks of the histogram.
+# We want the counts for each position thus we provide a sequence from 0 to 30
+hist(rbinom(100,Ne,0.2),breaks=0:35, warn.unused = FALSE)
+```
+
+This is described with the famous probability mass function (pmf) of binomial distributed variables. Note that probability density (pdf) and probabilty mass function (pmf) are similar, density functions are used for continuous variables and mass functions for discrete.
+
+$Pr(X=k) = \binom{n}{k}p^k(1-p)^{n-k}$
+
+* n population size
+* k blue marbles
+* p probability of drawing a blue marble
+* n-k red marbles
+* 1-p probability of drawing a red marble
+
+This equation allows to compute the probability of for example drawing exactly 15 blue marbles with a population of size 100 and a probability of drawing a blue marble 0.2.
+
+This can also be computed with r
+
+```{r}
+# dbinom (q,size,prob) 
+# x vector of quantiles (blue marble count)
+dbinom(15,100,0.2) 
+
+# cumulative probability
+# Soo, whats the cumulative probability?
+pbinom(15,100,0.2) 
+```
+
+
+Let's just plot the difference
+```{r}
+# a sequence from 1 to 100
+xseq<-0:100
+dseq<-dbinom(xseq,100,0.2) 
+pseq<-pbinom(xseq,100,0.2)
+plot(xseq,dseq,type="l",ylim=c(0,1))
+lines(xseq,pseq,col="red")
+```
+
+## Remember
+
+* probabilitiy density (mass) functions start with d (dbinom, dnorm, dunif, etc)
+* cumulative probability functions start with p (pbinom, pnorm, punif, etc)
+* random number generators start with r (rbinom, rnorm, runif, etc)
+
+
+
+
+# Simulating drift
+
+## Define the problem
+What do we need as start parameters?
+
+* the population size
+* number of generations
+* start frequency of allele (frequency of blue marbles)
+
+What should be the output? We have the following possibilities
+
+* a plot (ggplot, or standard libarar)
+* the final count of blue marbles
+* the final fraction of blue marbles
+* a vector with the count of blue marbles during the experiment
+* **a vector with the fraction of blue marbles during the experiment**
+
+Each generation we need the following steps
+
+* draw marbles and count the number of blue marbles
+* compute the new frequency of blue marbles
+* append the new frequency to the output vector
+
+## A simple drift simulator
+
+
+```{r}
+wfsim<-function(ne,g,p)
+{
+  # three parameter, ne..population size, g..generations, p..starting allele frequency
+  rv=c(p) # store the initial starting allele frequency
+  
+  # for every generation
+  for(i in seq(1,g))
+  {
+    b<-rbinom(1,ne,p)   # draw marbles
+    p<-b/ne             # compute new frequency
+    rv<-c(rv,p)         # add new frequency to return value (rv)
+  }
+  return(rv)            # done, give the frequency vector to the user
+}
+
+# run the simulations with ne=100, g=100, p=0.5
+sr<-wfsim(100,100,0.5)
+# and plot the result
+plot(sr,type="l")
+```
+
+
+## Functions
+
+
+```{r}
+# Lets start with a simple one
+# Function computing the area of a rectangle
+# the function has two parameters, sidea and sideb
+area<-function(sidea,sideb)
+{
+  ar<-sidea*sideb   # compute the area
+  return(ar)        # return the value to the user
+}
+# some function calls
+print(area(10,2))
+print(area(400,200))
+
+# Quick question
+# How would you store the return value of a function in a variable?
+```
+
+
+### Exercise
+Generate a function that sums the values of a vector
+
+
+## A multiplexed drift simulator (visualization with ggplot2)
+Vectorization (ie concurrent processing of data, thus avoiding loops when doing computation steps for multiple samples) is essential in R and dramatically speeds up computation (we did a quick test and 40x speed up was easily achieved). 
+
+
+### Vectorization vs not-vectorized
+
+```{r}
+# so we have a vector a, containing values 1 to 10
+a<-1:10
+# and we want to multiply each value by 2, how to proceed
+
+# NOT vectorized; btw that is how for loops are done in R
+for(i in 1:length(a))
+{
+  a[i]<-a[i]*2
+}
+a
+
+# vectorized
+b<-1:10
+b<-b*2
+b
+```
+
+### Exercise
+Generate a non-vectorized function summing the values of a vector
+
+### Example vectorization of a simple function
+
+
+```{r}
+# is our simple area function already vectorized?
+area<-function(sidea,sideb)
+{
+  ar<-sidea*sideb   
+  return(ar)        
+}
+# generate the asides and the bsides
+as<-c(100,200,10,50,60,90,100) 
+bs<-c(1,3,50,50,10,20,10)
+print(area(as,bs)) # What will happen?
+
+```
+
+
+### What could be vectorized when simulating drift?
+
+* could we vectorize the genrations? No because each value depends on the previous one (markov chain)
+* could we vectorize ne or p, thus doing simulations simultanously for multiple population sizes or starting frequencies? **YES we can**
+
+
+### A fully vectorized drift simulator
+
+```{r}
+# replicate= default value of a function (needs not be provided by the user)
+wfsim<-function(ne,g,p,replicate=1:length(ne))
+{
+  np<-p     # frequency stored into new value, so we can keep the starting freq.
+  rv<-c(np) # vector with the frequencies, saving the start freq.
+  gen<-rep(0,length(ne)) # the generations, all replicates start with gen. 0
+  for(i in seq(1,g))
+  {
+    b<-rbinom(length(ne),ne,np) # draw marbles
+    np<-b/ne                    # compute new frequency
+    rv<-c(rv,np)                # add new frequencies
+    gen<-c(gen,rep(i,length(ne))) # add current generations
+  }
+  
+  # store simulation results in a data frame
+  # ne..pop. size, gen.. generations, rep..replicate, p..start freq
+  # freq..frequency of allele
+  df<-data.frame(ne=ne,gen=gen,rep=replicate,p=p,freq=rv)
+  # convert replicate to a factor
+  df$rep<-as.factor(df$rep)
+  return(df)
+}
+
+# Let' simulate 5 replicates
+df<-wfsim(c(100,100,100,100,100),100,c(0.5,0.5,0.5,0.5,0.5))
+
+library(ggplot2) # necessary stuff, load ggplot2 and set the background to beautiful
+theme_set(theme_bw())
+
+# generate  plot and print it
+g<-ggplot(df,aes(x=gen,y=freq,color=rep))+geom_line()+theme(legend.position="none")+
+  xlab("Frequency")+ylab("Generations")
+plot(g)
+```
+
+
+### Influence of the population size
+Now let's use a heterogenous sample, having three different populatio sizes and plot it with ggplot2
+
+
+```{r}
+popsizes<-c(rep(10,10),rep(100,10),rep(1000,10))
+replicate<-rep(1:10,3)
+startfreqs<-rep(0.5,30)
+df<-wfsim(popsizes,100,startfreqs,replicate)
+df$ne<-as.factor(df$ne)
+
+g<-ggplot(df,aes(x=gen,y=freq,color=rep))+geom_line()+facet_grid(.~ne)+theme(legend.position="none")+xlab("Frequency")+ylab("Generations")
+plot(g)
+```
+
+Questions:
+
+* What is the influence of the population size on drift?
+* Which populations are likely to have more variation?
+* Considering that variation is the substrate of evolution, which populations may more readily adapt to changing environments?
+
+
+### Exercise: Influence of the starting allele frequency
+Add a vertical facete with the starting allele frequency (I want 0.25, 0.5, 0.75)
+
+Hints:
+
+* facete code is: facet_grid(p~ne); p is on the y-achsis of the facete and Ne on the x-achsis
+* p in df needs to be converted to a factor
+
+
+```{r echo=FALSE}
+popsizes<-rep(c(rep(10,10),rep(100,10),rep(1000,10)),3)
+replicate<-rep(1:10,9)
+startfreqs<-c(rep(0.10,30),rep(0.5,30),rep(0.90,30))
+df<-wfsim(popsizes,100,startfreqs,replicate)
+df$ne<-as.factor(df$ne)
+df$p<-as.factor(df$p)
+
+g<-ggplot(df,aes(x=gen,y=freq,color=rep))+geom_line()+facet_grid(p~ne)+theme(legend.position="none")+xlab("Frequency")+ylab("Generations")
+plot(g)
+```
+
+
+
+## Time to fixation/loss
+
+Fixation if an allele reaches a frequency of 1 and loss if it reaches a frequency of 0
+
+```{r}
+fixt<-function(ne,p,replicate=1:length(ne))
+{
+  np<-p     
+  seg<-rep(TRUE,length(ne)) # segregating
+  fixtime<-rep(0,length(ne))
+  g<-0
+  while(sum(seg)>0)
+  {
+    b<-rbinom(length(ne),ne,np) # draw marbles
+    np<-b/ne                    # compute new frequency
+    g<-g+1
+                                # is still segregating
+    newseg<-ifelse(b==0 | b==ne,FALSE,TRUE)
+    difference<- seg!=newseg    # compare with previous generation
+    fixtime[difference] <- g    # set fixtime if status changed
+    seg<-newseg                 # set new previous generation
+  }
+  df<-data.frame(ne=ne,rep=replicate,p=p, fixtime=fixtime)
+  # convert replicate to a factor
+  df$rep<-as.factor(df$rep)
+  return(df)
+}
+# Lets investigate the influence of the population size
+nes<-rep(c(10,50,100,500,1000),100)
+p<-rep(0.5,500)
+df<-fixt(nes,p)
+df$ne<-as.factor(df$ne)
+g<-ggplot(df,aes(y=fixtime,x=ne))+geom_boxplot()
+plot(g)
+```
+
+Ok, that's nice but I think we should scale the y axis:
+
+```{r}
+g<-ggplot(df,aes(y=fixtime,x=ne))+geom_boxplot()+scale_y_log10()
+plot(g)
+```
+
+Question:
+
+ * influence of population size on time of fixation/loss?
+
+
+### Influence of starting allele frequency?
+
+```{r}
+nes<-rep(1000,900)
+p<-rep(seq(0.1,0.9,by=0.1),100)
+df<-fixt(nes,p)
+df$p<-as.factor(df$p)
+g<-ggplot(df,aes(y=fixtime,x=p))+geom_boxplot()
+plot(g)
+
+```
+
+#### What does Kimura say?
+
+Kimura and Ohta, 1969, Genetics: The Average Number of Generations until Fixation of a Mutant Gene in a Finite Population
+
+![](../pics/kimura.png)
+
+\clearpage
+
+What is the difference to our results? Why is there a difference?
+
+####Pro Exercise:
+
+Modify the time to fixation function such that only the fixation time is included (ignoring loss), plot the results using 9 different starting allele frequencies and compare again to the results of Kimura.
+
+
+
+
+
+
+
+
+

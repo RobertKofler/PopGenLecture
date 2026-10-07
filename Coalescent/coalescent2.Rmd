@@ -1,0 +1,348 @@
+---
+title: "Exercises in Population Genetics"
+subtitle: "Coalescent simulations"
+author: "Dr. Robert Kofler"
+output: 
+  github_document: 
+  toc: true
+  toc_depth: 2
+geometry: margin=0.5in
+---
+
+# Introduction
+
+## Prerequisites
+
+* R library ape
+* msms.jar 
+* PopPlaner.jar
+
+## Coalescent approximation:
+Moving from trees mainting the ancestry (remember our zigge-zagge trees) to more pretty trees. The idea is that the only peaces of interesting information are the time between coalescent events and the topology
+
+![](../pics/ca.png)
+
+\clearpage
+
+
+The coalescent approximation is based on the following insights:
+
+* Populations are large and only some k lineages are viewed; the probability that more than two lineages coalesce at the same time can be neglected
+* the process of generating a topology can be separated from generating the branch length, i.e.: first a random topology can be generated and than random branch length (exponential distribution) can be drawn.
+
+**major advantage of coalescent approximation: very fast**
+
+## Topology
+
+![](../pics/topology.png)
+
+## Prerequisite: Trees
+The R library ape supports printing trees in the Newick format (https://en.wikipedia.org/wiki/Newick_format)
+
+
+Simplest tree
+```{r}
+library(ape)
+tree <- read.tree(text="(A:2,B:2);")
+plot(tree)
+```
+
+A bit more complex tree
+```{r}
+tree <- read.tree(text="((A:2,B:2):3,C:5);")
+plot(tree)
+```
+
+
+```{r}
+tree <- read.tree(text="(((A:2,B:2):3,C:5):15,D:20);")
+plot(tree)
+```
+
+### Excercises 
+build the following trees
+
+```{r echo=FALSE}
+tree <- read.tree(text="(((A:2,B:2):3,C:5):15,(E:3,D:3):17);")
+plot(tree)
+```
+
+```{r echo=FALSE}
+tree <- read.tree(text="(((A:2,B:2):3,C:5):15,((E:1,F:1):2,(D:1,G:1):2):17);")
+plot(tree)
+```
+
+## implementing a coalescent approximation
+### requirements
+**obtaining a subset of a vector excluding some elements **
+```{r}
+a<-10:20
+b<-a[-2]
+b
+```
+
+** Random exponentially distributed values**
+```{r}
+# exponential distribution: mean = 1/rate
+# ie the higher the rate, the lower the mean
+hist(rexp(500,rate=10))
+hist(rexp(500,rate=1))
+
+```
+
+
+```{r}
+coaltree <- function(n) {
+  # many thanks to Thomas Taus for sharing his brilliant code!
+  
+  # initate the nodes; branch lengths are all 0
+  nodes <- rep(0, times=n)
+  names(nodes) <- 1:n
+  
+  # simulate one coalescent event after the other
+  for(i in seq(1, n-1)) {
+    ncount <- length(nodes) # node count
+    
+    # pick random nodes to merge
+    tomerge <- sample(ncount, size=2)
+    
+    # random branch length; exponential distribution
+    bl <- rexp(1, rate=ncount*(ncount-1)/2)
+    
+    # get length of the two nodes
+    left <- nodes[tomerge[1]]
+    right <- nodes[tomerge[2]]
+    
+    # length difference between the two nodes that should be merged
+    deltaleft <- if(right > left) right-left else 0
+    deltaright <- if(left > right) left-right else 0
+    
+    # new node name;
+    # ie. names of the two merged nodes
+    # plus the branch lengths
+    # = Newick
+    cnode <- paste("(", names(left), ":", bl+deltaleft, ",", names(right), ":", bl+deltaright, ")", sep="")
+    
+    # remove the two merged nodes
+    nodes <- nodes[-tomerge]
+    
+    #add the new composite node
+    # first the length
+    nodes <- c(nodes, max(bl+left, bl+right))
+    # than the name
+    names(nodes)[length(nodes)] <- cnode
+  }
+  
+  # add semicolon, a Newick requirement
+  return(paste0(names(nodes), ";"))
+}
+# compute the tree
+newicktree <- coaltree(10)
+newicktree
+
+# plot the tree
+ct<-read.tree(text=newicktree)
+plot(ct)
+```
+
+# msms (ms mit selektion)
+Coalescent simulations with selection
+
+## Minimal call of msms
+
+```{bash eval=FALSE}
+java -jar msms.jar sampleCount repeats -t theta
+```
+
+* sampleCount: number of DNA sequences
+* repeats: how often should the simulations be repeated for the given set of parameters
+* theta: amount of polymorphism $\theta=4N_e\mu$ Interestingly we would get the same amount of polymorphism by either increasing the mutation rate or the effective population size. 
+
+Exercise:
+explain the influence of Ne on theta 
+
+
+
+```{bash}
+# change path to ms directory
+cd /Users/robertkofler/iprof/lectures/PopGenExercises/msms
+java -jar msms.jar 5 1 -t 5 
+```
+
+
+
+## plotting a tree
+
+```{bash}
+cd /Users/robertkofler/iprof/lectures/PopGenExercises/msms
+# get a tree using -T
+# Question: does -t 5 have an influence on the shape of the tree
+java -jar msms.jar 10 1 -t 5 -T
+```
+
+
+
+```{r}
+# print the tree by copy and pasting into R..
+# for example
+tree<-"(3:1.76266,((4:0.25100,10:0.25100):0.19867,(((5:0.00991,2:0.00991):0.13773,7:0.14764):0.23604,(9:0.19889,(1:0.13684,(6:0.02352,8:0.02352):0.11332):0.06204):0.18479):0.06599):1.31299);"
+plot(read.tree(text=tree))
+```
+
+this is a standard tree for the most boring case
+
+## Influence of demography
+
+### Growing population
+
+```{bash eval=FALSE}
+# growth -G growthRate_alpha
+java -jar msms.jar 10 1 -t 5 -T -G 1.5
+```
+
+* $N=Ne^{-\alpha t}$
+* alpha positive expanding
+* alpha negative shrinking
+
+```{r echo=FALSE}
+tree<-"((2:0.00935,7:0.00935):0.56482,(8:0.45675,(((1:0.02629,4:0.02629):0.22537,((9:0.00680,10:0.00680):0.12251,(3:0.05094,5:0.05094):0.07837):0.12236):0.06624,6:0.31791):0.13884):0.11742);"
+plot(read.tree(text=tree))
+```
+
+* Whats the difference?
+* How is the expected pattern of polymorphism changing? 
+* Where do you expect more singletons?
+
+### Shrinking population
+```{bash eval=FALSE}
+java -jar msms.jar 10 1 -t 5 -T -G -2
+```
+
+
+```{r echo=FALSE}
+tree<-"(((7:0.03323,2:0.03323):0.00535,(9:0.00385,3:0.00385):0.03473):1.18722,((((8:0.03380,6:0.03380):0.00263,(1:0.02801,5:0.02801):0.00842):0.02496,4:0.06139):0.30298,10:0.36437):0.86143);"
+plot(read.tree(text=tree))
+```
+
+* Whats the difference?
+* How is the expected pattern of polymorphism changing? 
+* Where do you expect more singletons?
+
+
+### Bottleneck
+
+
+```{bash eval=FALSE}
+java -jar msms.jar 10 1 -t 5 -T -I 1 10 -en 0.2 1 0.3 -en 0.4 1 1.0
+```
+
+Questions and tasks
+
+* -I demes samples
+* -en bottlenecktime demenumber fraction_popsize
+* -en 0.2 1 0.3 bottleneck starting at time 0.2; size = 30% of original population
+* -en 0.4 1 1.0 end of bottleneck at time 0.4
+* Play with different bottleneck times and sizes
+
+```{r echo=TRUE}
+tree="((((2:0.00689,5:0.00689):0.05246,1:0.05936):0.13163,(7:0.07542,4:0.07542):0.11557):1.72711,(6:0.10136,(8:0.09976,((3:0.01124,9:0.01124):0.02080,10:0.03204):0.06771):0.00160):1.81675);"
+plot(read.tree(text=tree))
+```
+
+#### Planning bottlenecks / complex demographies with msms
+
+```{bash eval=FALSE}
+# open PopPlaner
+java -jar PopPlanner.jar
+```
+
+![](../pics/ppbottleneck)
+
+## Recombination 
+
+```{bash eval=FALSE}
+java -jar msms.jar 10 1 -t 5 -T -r 2
+```
+
+
+```{r}
+tree="(4:0.46329,(((3:0.14568,(5:0.00400,2:0.00400):0.14168):0.11708,10:0.26276):0.09154,((8:0.02699,1:0.02699):0.30651,((7:0.04412,6:0.04412):0.04440,9:0.08853):0.24497):0.02080):0.10899);
+(((3:0.14568,(5:0.00400,2:0.00400):0.14168):0.11708,10:0.26276):0.09154,((8:0.02699,1:0.02699):0.30651,(4:0.23129,((7:0.04412,6:0.04412):0.04440,9:0.08853):0.14276):0.10221):0.02080);
+((((9:0.08743,3:0.08743):0.05825,(5:0.00400,2:0.00400):0.14168):0.11708,10:0.26276):0.09154,((8:0.02699,1:0.02699):0.30651,(4:0.23129,(7:0.04412,6:0.04412):0.18716):0.10221):0.02080);
+"
+plot(read.tree(text=tree))
+```
+
+** Whats going on, why do we have sevarl trees? **
+
+![](../pics/mnrec.png)
+\clearpage
+
+
+## Migration ##
+
+```{bash eval=FALSE}
+java -jar msms.jar 10 1 -t 5 -T -I 2 5 5 0.05
+```
+
+* -I demes samples-deme1 samples-deme2 migration-rate
+
+
+```{r}
+tree="((6:1.50432,((10:0.16282,(9:0.06539,7:0.06539):0.09744):0.17220,8:0.33502):1.16930):33.76309,((1:0.06373,3:0.06373):0.52764,(2:0.06538,(5:0.06511,4:0.06511):0.00027):0.52600):34.67603);"
+plot(read.tree(text=tree))
+```
+
+Questions and tasks:
+
+* What could be the major factor influencing coalescent with 2 or more demes
+* How would the pattern of polymorphism look in this case
+* Play with different demes and migration rates
+
+
+## Selection ##
+
+```{r eval=FALSE}
+java -jar msms.jar 10 1 -t 5 -r 500 20 -SAA 2000 -SaA 1000 -N 10000 -SF 0 -Sp .5
+```
+
+* -r recombinationrate recombinationsites
+* -SAA selection coefficient of homozygous beneficial genotype
+* -SAa selection coefficient of heterozygous allele
+* -N population size
+* -SF time since fixation
+* -Sp position of selected allele on a scale from 0 to 1. In case of 0.5 selected allele is at the middle of the simulated loci
+
+
+```{bash eval=FALSE}
+java -jar msms.jar 10 1 -t 5 -T -SAA 300 -SaA 200 -N 10000 -SF 0 -Sp .5
+```
+
+```{r echo=FALSE}
+tree="(3:0.04612,((((4:0.04053,9:0.04053):0.00082,6:0.04135):0.00173,(5:0.01006,8:0.01006):0.03302):0.00163,((1:0.00498,2:0.00498):0.03826,(7:0.04122,10:0.04122):0.00202):0.00147):0.00141);"
+plot(read.tree(text=tree))
+```
+
+**How is this site frequency spectrum going to look like?**
+
+### Excersises
+Start MSMSPlay
+
+```{bash eval=FALSE}
+java -cp $msp at.mabs.gui.MSMSPlay -ms 20 1000 -t 100 -r 50 20
+```
+
+![](../pics/msmsplay.png)
+
+ /clearpage
+
+
+
+Excersises:
+
+* compute the site frequency spectrum of a simple neutral coalescent (20 sites); whats the influence of theta?
+* compare it to a site frequency spectrum using a scenary with selection (eg.: -ms 20 1000 -t 100 -r 500 20 -SAA 2000 -SaA 1000 -N 10000 -SF 0 -Sp .5)
+* whats the difference between a selection scenario with and without recombination?
+* whats the influence of SF and the position of the selected site?
+* can you mimic the signature of selection using bottlenecks?
+* can you mimic the signature of selection using a migration scenario?

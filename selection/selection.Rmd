@@ -1,0 +1,351 @@
+---
+title: "PAML"
+subtitle: "Neutrality tests"
+author: "Dr. Robert Kofler"
+output: 
+  github_document: 
+  toc: true
+  toc_depth: 2
+geometry: margin=0.5in
+---
+# Acknowledgments:
+
+Many thanks go to Dr. Carolin Kosiol who generously shared her PAML course slides, which very hugely inspiring for this lecture.
+
+# Introduction 
+PAML is a widely used and cited tool written by Ziheng Yang
+
+Book: Molecular Evolution - A Statistical Approach; Ziheng Yang, 2014, Oxford University Press
+
+## What can you do with PAML?
+
+* Identify positive selectionion
+* Compare and test phylogenetic trees
+* Estimate species divergence
+* Reconstruct ancestral sequences
+
+
+
+### Identification of positive selection 
+This is of high interest for many biologists as fixations of advantagous mutations are responsible for phenotypic evolution, evolutionary innovations and species divergence.
+
+Therefore it is necessary to distinguish **positive selection** from **neutral evolution** (mutation and drift)
+
+## Required input?
+
+* Aligned sequences - mostly multiple sequence alignment
+* Phylogenetic trees for the aligned sequences
+
+
+
+## Equally important. What does PAML not do?
+
+* align sequences 
+* gene prediction; for example codeml assumes that sequences are pre-aligned exons, with first nucleotide being first position of codon; introns are assumed to be already removed
+* generate phylogenetic trees
+
+## Obtaining PAML
+
+http://abacus.gene.ucl.ac.uk/software/paml.html
+
+## Sub-programs
+
+* baseml: maximum likelyhood analysis of nucleotide sequences
+* basemlg: implements continous gamma model of Yang (1993)
+* **codeml**: maximum likelyhood analysis of codons or amino acids
+* evolver: simulations of sequences
+* pamp: parsimony based analysis for estimating substitution rates of Yang and Kumar (1996)
+* yn00: estimates synonymous and non-synonymous substitution rates between two sequences according to Yang and Nielsen (2000) $\rightarrow$ yn00
+* mcmctree:a bayesian approach (Markov chain monte carlo) for estimating phylogenetic trees
+* **chi2**: computes critical chi2 and p values for likelihood ratio tests.
+
+Let's go to bin directory and have a look
+
+```{bash}
+# use the path that fits your system
+# I used paml 4.8
+cd /Users/robertkofler/programs/paml4.8/bin
+ls
+```
+
+## Example data sets
+
+PAML comes with a nice set of examples, that allow to explore features and input files of the software but also to show common sources of misinterpretation of the data. All examples are from scientific publications
+```{bash}
+# use the path that fits your system
+# I used paml 4.8
+cd /Users/robertkofler/programs/paml4.8/examples
+ls
+```
+
+I picked some:
+
+* **HIVNSites**: data from HIV-1 to explore which sites are highly conserved and which under positive selection
+* lysin: sperm lysin from 25 abalone species to test hypothesis that amino acids at the surface are positively selected
+* MouseLemur: mtDNA of mouse lemurs to estimate divergence dates
+* TipDate: alignment of 33SIV/HIV-2 sequences 
+
+# Basic concepts
+## Universal genetic code
+
+![](../pics/geneticcode.png)
+\clearpage
+
+## Comparing two protein coding DNA sequences
+
+* ds (KS): number of synonymous substitutions per synonymous site
+* dN (KA): number of non-synonyomous substitutions per non-synonymous site
+* $\omega = dN/ds$
+* $\omega \approx 1$ neutral evolution
+* $\omega < 1$ purifying selection 
+* $\omega > 1$ positive selection
+
+$\omega$ based tests are quite powerful in population genetics for identifying positive selection. They are actually more powerful than most other tests since they rely on fewer assumptions.
+
+Yang, Z.; Bielawski, J. P. (2000). "Statistical methods for detecting molecular adaptation". Trends in ecology & evolution (Personal edition). 15 (12): 496–503
+
+## How to count syn. vs non-syn. sites?
+
+
+![](../pics/countingsites.png)
+\clearpage
+
+Counting of synonymous and non-synonymous sites is done for each codon of sequence. For example given the codon TTT than 1 substitution is synonymous and 8 are non-synonymous (ie. aa-changing)
+
+* $S=1/9*3=0.333$
+* $N=8/9*3=2.666$
+
+
+Given a nucleotide sequence of a protein (eg "TTT TTT TTT TTT") the number of syn.  or non-syn. sites is just the sum of all codons (e.g. $S=4*0.333$ and $N=4*2.66=$)
+
+## Calculating $\omega$
+Now, we assume an alignment of two protein sequences with a length of 100bp. Using the method shown before we count $N=75$ and $S=25$.
+Based on the alignment we observe 5 non-synonymous substitutions and 5 synonymous ones.
+
+$ds=5/25=0.2$
+$dn=5/75=0.066$
+$\omega=0.066/0.2=0.333$
+
+What does it mean when $\omega <1$?
+
+## Sources of bias and corrections
+
+### Transition, transversion rate difference
+
+![](../pics/trtr.png)
+Transitions ($66.6\%$) are much more frequent than transversions ($33.3\%$).
+At the third position of the codon transitions are more likely to be synonymous than transversions, which can lead to a bias of the synonymous length estimates.
+
+![](../pics/trtrsyn.png)
+\clearpage
+
+### Codon usage bias
+
+Many codons actually code for the same amino acid, which is also called degeneracy of genetic code (or redundancy). For example Alanin (A), here all four codons GCU, GCC, GCA, and GCG would be equally suitable, and in an unbiased code all should occur equally often in genes ($25\%$). In practice this is not the case for some organism. For example *E. coli*, *S. cerevisae*, *D. melanogaster*, *A. thaliana* have a codon usage bias, whereas humans have not.
+
+Investigation of genes showed that codon usage bias leads to a reduced number of synonymous sites (thus the opposite effect of the transition/transversion bias).
+
+### Multiple mutations in one codon
+
+Frequently two or more substitutions are found in a codon. The problem is that the number of synonymous and non-synonymous substitutions depends on the order of the substitions, for example CCT and CAG
+
+* Route 1: CCT(Pro) $\leftrightarrow$ CAT (His) $\leftrightarrow$ CAG (Gln): $S=0$ and $N=2$
+* Route 2: CCT(Pro) $\leftrightarrow$ CCG (Pro) $\leftrightarrow$ CAG (Gln): $S=1$ and $N=1$
+
+So what to do?
+Usually the average over all possible routes is used: $S=0.5$ and $N=1.5$
+
+
+### Factors to consider for building a model
+
+* transition/transversion rate ratio $\kappa$
+* Biased codo usage for codon $j$: $\pi_j$
+* nonsynonymous to synonymous rate ratio: $\omega$
+
+For example, the following factors need to be considered to model rates to CTG:
+
+* CTC(Leu) $\Rightarrow$ CTG (Leu): $\pi$
+* TTG(Leu) $\Rightarrow$ CTG (Leu): $\kappa\pi$
+* GTG(Val) $\Rightarrow$ CTG (Leu): $\omega\pi$
+* CCG(Pro) $\Rightarrow$ CTG (Leu): $\kappa\omega\pi$
+
+Based on these factors and given the data PAML computes the most likely values for these factors, ie. the parameters that best explain the data.
+
+### Branch models vs sites models
+
+The problem is that for an entire protein $\omega$ is rarely larger than 1 for all sites along a branch. So frequently **site models** are used, where  $\omega$ is allowed to vary among codons. Thus some sites could be positively selected while others are not. Alternatively $\omega$ may vary among branches, when for example positive selection is strong for a species exposed to a rapidly changing environment. This are called **branch models**.
+
+
+![](../pics/branchmodels.png)
+
+![](../pics/sitesmodels.png)
+\clearpage
+
+  Literature: 
+  
+  * branch model: Yang, Z. 1998. Likelihood ratio tests for detecting positive selection and application to primate lysozyme evolution. Molecular Biology and Evolution 15:568-573
+  * site model in HIV-1   Nielsen, R., and Z. Yang. 1998. Likelihood models for detecting positively selected amino acid sites and applications to the HIV-1 envelope gene. Genetics 148:929-936.
+
+# Using PAML
+## HIVNSites; Sites-model with codeml
+
+We use the example HIVNSites; Investigates HIV-1 (env region) during the infection (from year 3-7) of a single patient. It tests the hypothesis that some regions could be positively selected during the infection.
+
+Literature: Nielsen, R., and Z. Yang. 1998. Likelihood models for detecting
+positively selected amino acid sites and applications to the HIV-1
+envelope gene. Genetics 148:929-936.
+
+
+```{bash}
+cd /Users/robertkofler/programs/paml4.8/examples/HIVNSsites
+ls
+```
+
+
+
+
+### Input of sequence data: the PHYLIP format
+```{bash}
+head /Users/robertkofler/programs/paml4.8/examples/HIVNSsites/HIVenvSweden.txt
+```
+
+* line 1: number of species followed by the sequence lenght
+* next lines: species-name (sequence name) and the sequence (separator either newline or two space)
+
+### Input of the tree: 
+
+```{bash}
+head /Users/robertkofler/programs/paml4.8/examples/HIVNSsites/HIVenvSweden.trees
+```
+
+* line 1: species and trees
+* line 2: the tree similar to the Newick format
+
+### the control file:
+
+All parameters are set with the control file (*.ctl)
+
+```{bash}
+cat /Users/robertkofler/programs/paml4.8/examples/HIVNSsites/codeml.ctl
+```
+
+Most important: 
+* *model* - set the branch models
+* *Nssites* - sites models (branch models must be set to model=0); several sites models can be specified at once, separated by space
+
+
+
+
+![](../pics/smoverview.png)
+
+\clearpage
+
+Most widely  approaches for detecting positive selection are to compare models M1a with M2a or M7 with M8.
+
+
+### Run codeml
+
+First  copy the whole folder to a new location than run codeml. It will automatically use the control (ctl) file.
+```{bash eval=FALSE}
+cp -rf /Users/robertkofler/programs/paml4.8/examples/HIVNSsites /Users/robertkofler/tmp
+cd /Users/robertkofler/tmp/HIVNSsites
+/Users/robertkofler/programs/paml4.8/bin/codeml
+```
+
+
+Now lets look at the content of the folder. Obviously there are several novel files.
+
+```{bash}
+cd /Users/robertkofler/tmp/HIVNSsites
+ls -l
+```
+
+The output is the mlc file
+
+```{bash eval=FALSE}
+less /Users/robertkofler/tmp/HIVNSsites/mlc
+```
+
+## Excercise: interpretation of output
+We have the following resources available
+* Manual: http://abacus.gene.ucl.ac.uk/software/pamlDOC.pdf
+* FAQ: http://abacus.gene.ucl.ac.uk/software/pamlFAQs.pdf
+* First publication: http://www.genetics.org/content/148/3/929.long
+* Second publication: http://www.genetics.org/content/155/1/431.long
+
+
+**Answer the following questions**
+
+* How many sequences have been used and what is the number of codons per sequence?
+* Which codons have been positively selected?
+* Whats the $\omega$ of the positively selected codons?
+* How would you interpret these data, thinking about the tree and not just two sequences?
+* Where do we see that we did not accidentially use a branch model?
+* Do we have a codon usage bias?
+* What is $\kappa$ in the three used models?
+* What is $\omega$ in the three used models?
+* What is the number of non-synonymous sites? What is the number of synonymous sites?
+* Why is N and S different between the models. Which factors could explain that?
+* Where to find the log likelihood of a model (lnL)? And where the number of parameters (np)?
+* We have three models which one is now the best? (a low log likelihood or a high?)
+
+
+```{bash echo=FALSE, eval=FALSE}
+ns... number of sequences 
+ls... number of codons
+
+Codon usage in sequences:
+Codon usage for all of the 13 sequences in chunks of 6
+
+Codon position x base (3x4) table for each sequence (easy)
+
+Sums of codon usage counts (codon usage bias best overview; clear evidence for codon usage bias in HIV-1 env)
+
+Where do we see that we did not accidentially use a branch model? (Because dN/dS is constant in the branches along the model)
+
+Why is N and S different: because Kappa  is different between the models (omega Im not sure, Karolin says in her slides that omega is set to 1 when computing N and S)
+
+How to find positivel selected codons: Naive Empirical Bayes (NEB) analysis
+
+Sites under pos selection from paper: 28, 66, 87
+
+
+```
+
+
+
+
+
+## Some additional explanations
+### NEB vs BEB
+
+* Naive Empirical Bayes (NEB) ignores sampling errors in parameter estimates.
+* Bayes Empirical Bayes (BEB) accounts for sampling errors by integrating over a prior.
+
+### Model selection; test if one model is better than another one
+
+Needs the degrees of freedom (to take the number of estimated parameters into account; in principle always a model with fewer estimated parameters is preferable) and the log likelihood (a higher log likelihood is better),
+
+* Model 1 (no selection):  $lnL=-1114.64$
+* Model 2 (yes selection): and $lnL=-1106.44$
+
+Model 2 estimates  has a higher log likelihood but also estimates more parameters. So is the difference significant?
+
+We need the degrees of freedom and the delta log likelihood. The degrees of freedom depend on the number of estimated parameters. Let's have a look at figure 2, Model1 has 3 estimated parameters and Model2 has 5.
+$df=5-3=2$
+$2\delta L=2(-1106.44--1114.64)=16.4$
+
+Comparing this to a chi-squared distribution
+
+```{bash eval=FALSE}
+/Users/robertkofler/programs/paml4.8/bin/chi2
+```
+We can can conclude that model 2 (selection) is significnatly better suited to explain the data than model 1 (no selection)
+
+### Reminder
+Remember, in practice mostly M1a (1) is compared to M2a (2) and M7 to M8.
+
+* M7-M8: Yang, Nielsen, Goldman, Pedersen (2000 Genetics 155:431-449
+* M1a-M2a: Yang, Wong, Nielsen (2005. Mol Biol Evol).
+
+
