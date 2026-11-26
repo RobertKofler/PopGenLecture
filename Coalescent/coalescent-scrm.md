@@ -10,6 +10,7 @@ Dr. Robert Kofler
 - R library scrm
 
 ``` r
+# important for today
 install.packages("ape")  # ape: reading, writing and plotting phylogenetic trees
 install.packages("scrm") # scrm: a fast coalescent simulator (it uses the syntax of the classic program ms)
 ```
@@ -269,7 +270,7 @@ sim
     ##  [9,]                 0                 0
     ## [10,]                 1                 0
 
-### the SFS of seg_sites
+### the SFS of the segregating sites
 
 ``` r
 sfs <- function(seg) {
@@ -294,18 +295,18 @@ barplot(s, xlab = "derived allele count", ylab = "number of sites")
 ``` r
 sim <- scrm("10 1 -t 5 -T") 
 tree <- read.tree(text = sim$trees[[1]])
-plot(tr); 
+plot(tree); 
 axisPhylo()
 ```
 
 ![](coalescent-scrm_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
-\### Idea! We could plot the expected SFS from the tree versus the
-actual SFS
+
+### Idea! We could plot the expected SFS from the tree versus the actual SFS
 
 ``` r
 par(mfrow = c(1, 3))
-plot(tr)
-barplot(branch_sfs(tr), xlab = "derived allele count", ylab = "branch length")
+plot(tree)
+barplot(branch_sfs(tree), xlab = "derived allele count", ylab = "branch length")
 barplot(sfs(sim$seg_sites[[1]]),       xlab = "derived allele count", ylab = "number of sites")
 ```
 
@@ -317,173 +318,293 @@ par(mfrow = c(1, 1))
 
 **Question** why does it differ?
 
-## plotting a tree
-
-``` bash
-cd /Users/robertkofler/iprof/lectures/PopGenExercises/msms
-# get a tree using -T
-# Question: does -t 5 have an influence on the shape of the tree
-java -jar msms.jar 10 1 -t 5 -T
-```
+## One simulation gives a noisy SFS lets move to many simulations
 
 ``` r
-# print the tree by copy and pasting into R..
-# for example
-tree<-"(3:1.76266,((4:0.25100,10:0.25100):0.19867,(((5:0.00991,2:0.00991):0.13773,7:0.14764):0.23604,(9:0.19889,(1:0.13684,(6:0.02352,8:0.02352):0.11332):0.06204):0.18479):0.06599):1.31299);"
-plot(read.tree(text=tree))
+# 1000 simulations
+sim <- scrm("10 1000 -t 5") 
+
+mean_sfs <- function(sim) {
+  sfs_for_each_sim<-sapply(sim$seg_sites, sfs) # lets compute the sfs for each simulation $seg_sites[[1]], $seg_sites[[2]] etc... 
+ rm <-rowMeans(sfs_for_each_sim)   # average the SFS over all simulations
+ return(rm)
+}
+
+ms <- mean_sfs(sim)
+bp <- barplot(ms, xlab = "derived allele count i", ylab = "mean number of sites")
 ```
 
-![](coalescent-scrm_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+![](coalescent-scrm_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
 
-this is a standard tree for the most boring case
+**Exercise**: compute the SFS of the tree for 1000 simulations
 
-## Influence of demography
+**Exercise**: does the SFS change with different Theta?
+
+## Influence of demography based on trees and SFS
 
 ### Growing population
 
-``` bash
+Perform simulations for a growing and a neutral population
+
+``` r
 # growth -G growthRate_alpha
-java -jar msms.jar 10 1 -t 5 -T -G 1.5
+# population has grown from a rather low size to the current size N0
+grow <- scrm("10 1000 -t 1000 -T -G 3") 
+neut <- scrm("10 1000 -t 1000 -T") 
 ```
 
-- $N=Ne^{-\alpha t}$
-- alpha positive expanding
-- alpha negative shrinking
+**Exercise** what do we expect? in terms of i) total variation and ii)
+SFS?
+
+Inspect SFS
+
+``` r
+par(mfrow = c(1, 2))
+mn <- mean_sfs(neut)
+mg <- mean_sfs(grow)
+
+par(mfrow = c(1, 2))
+barplot(mn, xlab = "derived allele count i", ylab = "mean number of sites")
+barplot(mg, xlab = "derived allele count i", ylab = "mean number of sites")
+```
 
 ![](coalescent-scrm_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
 
-- Whats the difference?
-- How is the expected pattern of polymorphism changing?
-- Where do you expect more singletons?
+Lets look at some trees
+
+``` r
+par(mfrow = c(1, 2))
+plot(read.tree(text = neut$trees[[1]]))
+axisPhylo()
+plot(read.tree(text = grow$trees[[1]]))
+axisPhylo()
+```
+
+![](coalescent-scrm_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
 
 ### Shrinking population
 
-``` bash
-java -jar msms.jar 10 1 -t 5 -T -G -2
-```
-
-![](coalescent-scrm_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
-
-- Whats the difference?
-- How is the expected pattern of polymorphism changing?
-- Where do you expect more singletons?
-
-### Bottleneck
-
-``` bash
-java -jar msms.jar 10 1 -t 5 -T -I 1 10 -en 0.2 1 0.3 -en 0.4 1 1.0
-```
-
-Questions and tasks
-
-- -I demes samples
-- -en bottlenecktime demenumber fraction_popsize
-- -en 0.2 1 0.3 bottleneck starting at time 0.2; size = 30% of original
-  population
-- -en 0.4 1 1.0 end of bottleneck at time 0.4
-- Play with different bottleneck times and sizes
+What happens?
 
 ``` r
-tree="((((2:0.00689,5:0.00689):0.05246,1:0.05936):0.13163,(7:0.07542,4:0.07542):0.11557):1.72711,(6:0.10136,(8:0.09976,((3:0.01124,9:0.01124):0.02080,10:0.03204):0.06771):0.00160):1.81675);"
-plot(read.tree(text=tree))
+# -G -3 shrinking
+shrink <- scrm("10 1000 -t 1000 -T -G -3") 
+neut <- scrm("10 1000 -t 1000 -T") 
+```
+
+``` r
+# -eG 1 0 before time 1 growth rate was 0 = constant population size
+# time measured in units of 4N0
+shrink <- scrm("10 1000 -t 1000 -T -G -3 -eG 1 0") 
+neut <- scrm("10 1000 -t 1000 -T") 
+```
+
+**Exercise** What do we expect for variation and SFS
+
+``` r
+par(mfrow = c(1, 2))
+mn <- mean_sfs(neut)
+ms <- mean_sfs(shrink)
+
+par(mfrow = c(1, 2))
+barplot(mn, xlab = "derived allele count i", ylab = "mean number of sites")
+barplot(ms, xlab = "derived allele count i", ylab = "mean number of sites")
 ```
 
 ![](coalescent-scrm_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
 
-#### Planning bottlenecks / complex demographies with msms
+Lets look at some trees
 
-``` bash
-# open PopPlaner
-java -jar PopPlanner.jar
+``` r
+par(mfrow = c(1, 2))
+plot(read.tree(text = neut$trees[[1]]))
+axisPhylo()
+plot(read.tree(text = shrink$trees[[1]]))
+axisPhylo()
 ```
 
-![](../pics/ppbottleneck)
+![](coalescent-scrm_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
+
+### Bottleneck
+
+``` r
+# -G -3 shrinking
+bottle <- scrm("10 1000 -t 1000 -T -eN 0.05 0.01 -eN 0.06 1")
+neut <- scrm("10 1000 -t 1000 -T") 
+```
+
+``` r
+par(mfrow = c(1, 2))
+mn <- mean_sfs(neut)
+mb <- mean_sfs(bottle)
+
+par(mfrow = c(1, 2))
+barplot(mn, xlab = "derived allele count i", ylab = "mean number of sites")
+barplot(mb, xlab = "derived allele count i", ylab = "mean number of sites")
+```
+
+![](coalescent-scrm_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
+
+Lets look at some trees
+
+``` r
+par(mfrow = c(1, 2))
+plot(read.tree(text = neut$trees[[1]]))
+axisPhylo()
+plot(read.tree(text = bottle$trees[[1]]))
+axisPhylo()
+```
+
+![](coalescent-scrm_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
+
+**Excersice** Find parameters for bottlenecks to get even more
+singletons! Should the bottleneck best be recent or long ago in the
+past? Should the bottleneck be even more severe? Or should the
+bottleneck be longer?
 
 ## Recombination
 
-``` bash
-java -jar msms.jar 10 1 -t 5 -T -r 2
+``` r
+# -r recombination 
+# 5 = rho, scaled recombination rate rho= 4N0r (r probability per generation for crossover somewhere between the two ends of the locus)
+# 1000 = length of the genomic segment
+rec <- scrm("10 1000 -t 1000 -T -r 5 1000") 
+neut <- scrm("10 1000 -t 1000 -T") 
 ```
 
 ``` r
-tree="(4:0.46329,(((3:0.14568,(5:0.00400,2:0.00400):0.14168):0.11708,10:0.26276):0.09154,((8:0.02699,1:0.02699):0.30651,((7:0.04412,6:0.04412):0.04440,9:0.08853):0.24497):0.02080):0.10899);
-(((3:0.14568,(5:0.00400,2:0.00400):0.14168):0.11708,10:0.26276):0.09154,((8:0.02699,1:0.02699):0.30651,(4:0.23129,((7:0.04412,6:0.04412):0.04440,9:0.08853):0.14276):0.10221):0.02080);
-((((9:0.08743,3:0.08743):0.05825,(5:0.00400,2:0.00400):0.14168):0.11708,10:0.26276):0.09154,((8:0.02699,1:0.02699):0.30651,(4:0.23129,(7:0.04412,6:0.04412):0.18716):0.10221):0.02080);
-"
-plot(read.tree(text=tree))
+mn <- mean_sfs(neut)
+mr <- mean_sfs(rec)
+
+par(mfrow = c(1, 2))
+barplot(mn, xlab = "derived allele count i", ylab = "mean number of sites")
+barplot(mr, xlab = "derived allele count i", ylab = "mean number of sites")
 ```
 
-![](coalescent-scrm_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-30-2.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-30-3.png)<!-- -->
+![](coalescent-scrm_files/figure-gfm/unnamed-chunk-33-1.png)<!-- -->
 
-\*\* Whats going on, why do we have sevarl trees? \*\*
+**Exercise** Summarize the effect of recombination on the SFS
 
-![](../pics/mnrec.png)
+Lets look at the tree with recombination; Whats happening?
+
+``` r
+par(mfrow = c(1, 1))
+plot(read.tree(text = rec$trees[[1]]))
+```
+
+![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-1.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-2.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-3.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-4.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-5.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-6.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-7.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-8.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-9.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-10.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-11.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-12.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-13.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-14.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-15.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-16.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-17.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-18.png)<!-- -->![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-19.png)<!-- -->
+
+``` r
+axisPhylo()
+```
+
+![](coalescent-scrm_files/figure-gfm/unnamed-chunk-34-20.png)<!-- -->
+
+![](mnrec.png)
 
 ## Migration
 
-``` bash
-java -jar msms.jar 10 1 -t 5 -T -I 2 5 5 0.05
+``` r
+# -I 2 demes, 5 samples each, 4Nm = 0.5; this is the migration rate
+# hence 5 haplotypes frome deme 1, 5 from deme 2
+mig <- scrm("10 1000 -t 10 -T -I 2 5 5 0.1")   
+neut <- scrm("10 1000 -t 1000 -T") 
 ```
 
-- -I demes samples-deme1 samples-deme2 migration-rate
+**Exercise** What do we expect for the SFS and the tree;
 
 ``` r
-tree="((6:1.50432,((10:0.16282,(9:0.06539,7:0.06539):0.09744):0.17220,8:0.33502):1.16930):33.76309,((1:0.06373,3:0.06373):0.52764,(2:0.06538,(5:0.06511,4:0.06511):0.00027):0.52600):34.67603);"
-plot(read.tree(text=tree))
+mn <- mean_sfs(neut)
+mm <- mean_sfs(mig)
+
+par(mfrow = c(1, 2))
+barplot(mn, xlab = "derived allele count i", ylab = "mean number of sites")
+barplot(mm, xlab = "derived allele count i", ylab = "mean number of sites")
 ```
 
-![](coalescent-scrm_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
-
-Questions and tasks:
-
-- What could be the major factor influencing coalescent with 2 or more
-  demes
-- How would the pattern of polymorphism look in this case
-- Play with different demes and migration rates
-
-## Selection
+![](coalescent-scrm_files/figure-gfm/unnamed-chunk-36-1.png)<!-- -->
 
 ``` r
-java -jar msms.jar 10 1 -t 5 -r 500 20 -SAA 2000 -SaA 1000 -N 10000 -SF 0 -Sp .5
+par(mfrow = c(1, 2))
+plot(read.tree(text = neut$trees[[1]]))
+axisPhylo()
+plot(read.tree(text = mig$trees[[1]]))
+axisPhylo()
 ```
 
-- -r recombinationrate recombinationsites
-- -SAA selection coefficient of homozygous beneficial genotype
-- -SAa selection coefficient of heterozygous allele
-- -N population size
-- -SF time since fixation
-- -Sp position of selected allele on a scale from 0 to 1. In case of 0.5
-  selected allele is at the middle of the simulated loci
+![](coalescent-scrm_files/figure-gfm/unnamed-chunk-37-1.png)<!-- -->
 
-``` bash
-java -jar msms.jar 10 1 -t 5 -T -SAA 300 -SaA 200 -N 10000 -SF 0 -Sp .5
+**Exercise** How is the migration rate influence the SFS and the tree?
+**Exercise** What do we expect for three demes? Perform the simulations
+and double check your expectations.
+
+## Selection - Bonus with msprime
+
+We are not running the following code, it should just demonstrate how to
+get a sfs with selection Install reticulate and msprime
+
+``` r
+install.packages("reticulate")
+reticulate::py_install("msprime")
 ```
 
-![](coalescent-scrm_files/figure-gfm/unnamed-chunk-35-1.png)<!-- -->
+``` r
+library(reticulate)
+msprime <- import("msprime")
 
-**How is this site frequency spectrum going to look like?**
 
-### Excersises
+# parameters matching scrm("10 1000 -t 1000 -T -r 5 1000")
+nrep  <- 1000
+Ne    <- 1e4               # diploid Ne (any value works; rates are scaled to it)
+L     <- 1000              # locus length in bp
+theta <- 1000              # for the whole locus
+rho   <- 5                 # for the whole locus
+mu    <- theta / (4 * Ne * L)   # per bp per generation
+r     <- rho   / (4 * Ne * L)   # per bp per generation
 
-Start MSMSPlay
+# one msprime simulation -> seg_sites matrix (rows = haplotypes) ----
+sim_one <- function(seed, model = NULL) {
+  ts <- msprime$sim_ancestry(5L,                     # 5 diploids = 10 haplotypes
+                             population_size    = Ne,
+                             sequence_length    = L,
+                             recombination_rate = r,
+                             model              = model,
+                             random_seed        = seed)
+  ts <- msprime$sim_mutations(ts, rate = mu, random_seed = seed,
+                              discrete_genome = FALSE)   # infinite sites, as in scrm
+  t(ts$genotype_matrix())
+}
 
-``` bash
-java -cp $msp at.mabs.gui.MSMSPlay -ms 20 1000 -t 100 -r 50 20
+#  many msprime simulations, stored like scrm output 
+sim_msprime <- function(nrep, model = NULL) {
+  list(seg_sites = lapply(1:nrep, sim_one, model = model))
+}
+
+#the sweep 
+sweep <- msprime$SweepGenicSelection(
+  position        = L / 2,
+  start_frequency = 1 / (2 * Ne),
+  end_frequency   = 1 - 1 / (2 * Ne),
+  s               = 0.05,
+  dt              = 1e-6)
+sweep_model <- list(sweep, msprime$StandardCoalescent())
+
+# run
+neut_scrm <- scrm("10 1000 -t 1000 -T -r 5 1000")
+neut_msp  <- sim_msprime(nrep)
+sel_msp   <- sim_msprime(nrep, model = sweep_model)
+
+# compare
+sscr  =  mean_sfs(neut_scrm)
+sneu  =  mean_sfs(neut_msp)
+ssel  = mean_sfs(sel_msp) 
+
+
+
+par(mfrow = c(1, 3))
+barplot(sscr, xlab = "derived allele count i", ylab = "mean number of sites")
+barplot(sneu, xlab = "derived allele count i", ylab = "mean number of sites")
+barplot(ssel, xlab = "derived allele count i", ylab = "mean number of sites")
 ```
 
-![](../pics/msmsplay.png)
-
-/clearpage
-
-Excersises:
-
-- compute the site frequency spectrum of a simple neutral coalescent (20
-  sites); whats the influence of theta?
-- compare it to a site frequency spectrum using a scenary with selection
-  (eg.: -ms 20 1000 -t 100 -r 500 20 -SAA 2000 -SaA 1000 -N 10000 -SF 0
-  -Sp .5)
-- whats the difference between a selection scenario with and without
-  recombination?
-- whats the influence of SF and the position of the selected site?
-- can you mimic the signature of selection using bottlenecks?
-- can you mimic the signature of selection using a migration scenario?
+![](coalescent-scrm_files/figure-gfm/unnamed-chunk-40-1.png)<!-- -->
